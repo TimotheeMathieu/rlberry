@@ -88,7 +88,7 @@ def evaluate_agents(agent_manager_list,
 def plot_writer_data(agent_manager,
                      tag,
                      xtag=None,
-                     fignum=None,
+                     ax=None,
                      show=True,
                      preprocess_func=None,
                      title=None,
@@ -104,8 +104,8 @@ def plot_writer_data(agent_manager,
         Tag of data to plot on y-axis.
     xtag : str
         Tag of data to plot on x-axis. If None, use 'global_step'.
-    fignum: string or int
-        Identifier of plot figure.
+    ax: matplotlib axis
+        Matplotlib axis on which we plot. If None, create one
     show: bool
         If true, calls plt.show().
     preprocess_func: Callable
@@ -169,12 +169,13 @@ def plot_writer_data(agent_manager,
     else:
         xx = data.index
 
-    plt.figure(fignum)
+    if ax is None:
+        figure, ax = plt.subplots(1,1)
     lineplot_kwargs = dict(x=xx, y='value', hue='name', style='name', data=data)
     lineplot_kwargs.update(sns_kwargs)
     sns.lineplot(**lineplot_kwargs)
-    plt.title(title)
-    plt.ylabel(ylabel)
+    ax.set_title(title)
+    ax.set_ylabel(ylabel)
 
     if show:
         plt.show()
