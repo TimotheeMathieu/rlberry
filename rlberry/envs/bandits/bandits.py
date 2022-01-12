@@ -17,7 +17,7 @@ class Bandit(Model):
     ----------
 
     laws: list of laws.
-        laws of the arms. can either be a frozen scipy law or any class that
+        Laws of the arms. can either be a frozen scipy law or any class that
         has a method .rvs().
 
     """
@@ -77,23 +77,23 @@ class CorruptedLaws:
 
 class CorruptedNormalBandit(Bandit):
     """
-    Class for Bandits corrupted by nature.
+    Class for Normal Bandits corrupted by nature.
 
     Parameters
     ----------
 
     means: array-like of size n_arms, default=array([0,1])
-        means of the law of inliers of each of the arms.
+        Means of the law of inliers of each of the arms.
 
     stds: array-like of size n_arms or None, default=None
-        stds of the law of inliers of each of the arms. If None, use array with
+        Stds of the law of inliers of each of the arms. If None, use array with
         all ones.
 
     cor_prop: float in (0,1/2), default=0.05
-        proportion of corruption
+        Proportion of corruption
 
     cor_laws: list of scipy frozen laws or None, default=None
-        laws of corruption on each arm. If None, all the arms are corrupted by
+        Laws of corruption on each arm. If None, all the arms are corrupted by
         a normal of mean 1000 and std 1.
     """
 
@@ -127,4 +127,58 @@ class CorruptedNormalBandit(Bandit):
         return [
             CorruptedLaws(inlier_laws[a], cor_prop, self.cor_laws[a])
             for a in range(len(means))
+        ]
+
+class CorruptedParetoBandit(Bandit):
+    """
+    Class for Pareto Bandits corrupted by nature.
+
+    Parameters
+    ----------
+
+    alphas: array-like of size n_arms, default=array([2,2])
+        Shape parameters.
+
+    betas: array-like of size n_arms or None, default=None
+        Scale parameters of the law of inliers of each of the arms. If None,
+        use array with all ones.
+
+    cor_prop: float in (0,1/2), default=0.05
+        Proportion of corruption
+
+    cor_laws: list of scipy frozen laws or None, default=None
+        Laws of corruption on each arm. If None, all the arms are corrupted by
+        a normal of mean 1000 and std 1.
+    """
+
+    def __init__(
+        self,
+        alphas=np.array([2, 2]),
+        betas=None,
+        cor_prop=0.05,
+        cor_laws=None,
+    ):
+        Bandit.__init__(self)
+        self.laws = self.make_laws(alphas, betas, cor_prop, cor_laws)
+        A = len(self.laws)
+        self.action_space = spaces.Discrete(A)
+        self._actions = np.arange(A)
+
+    def make_laws(self, alphas, betas, cor_prop, cor_laws):
+        if cor_laws is not None:
+            self.cor_laws = cor_laws
+        else:
+            self.cor_laws = [stats.norm(loc=1000) for a in range(len(alphas))]
+        if betas is None:
+            self.betas = np.ones(len(alphas))
+        else:
+            self.betas = betas
+        assert len(alphas) == len(self.betas)
+        assert cor_prop <= 0.5
+        inlier_laws = [
+            stats.pareto(b=alphas[a], scale=self.betas[a]) for a in range(len(alphas))
+        ]
+        return [
+            CorruptedLaws(inlier_laws[a], cor_prop, self.cor_laws[a])
+            for a in range(len(alphas))
         ]
