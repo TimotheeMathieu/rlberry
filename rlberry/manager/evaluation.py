@@ -2,6 +2,11 @@ import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from os import listdir
+from pathlib import Path
+from datetime import datetime
+from rlberry.manager.agent_manager import AgentHandler
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,7 @@ def plot_writer_data(agent_manager,
                      xtag=None,
                      ax=None,
                      show=True,
+                     input_dir=None,
                      preprocess_func=None,
                      title=None,
                      sns_kwargs=None):
@@ -108,6 +114,9 @@ def plot_writer_data(agent_manager,
         Matplotlib axis on which we plot. If None, create one
     show: bool
         If true, calls plt.show().
+    input_dir: str or None, default = None
+        If not None, plot from the data recorded in the last experiments data
+        from input_dir (typically input_dir="rlberry_data/temp").
     preprocess_func: Callable
         Function to apply to 'tag' column before plot. For instance, if tag=episode_rewards,
         setting preprocess_func=np.cumsum will plot cumulative rewards
@@ -131,14 +140,40 @@ def plot_writer_data(agent_manager,
     agent_manager_list = agent_manager
     if not isinstance(agent_manager_list, list):
         agent_manager_list = [agent_manager_list]
+    if input_dir is not None:
+        writer_datas = []
+        dir_name =  Path(input_dir) / 'manager_data'
+        agent_names = []
+
+        # Identify agent folders
+        loaded_agent_manager_list = []
+        for agent in agent_manager_list:
+            writer_datas += [{}]
+            name = agent.agent_name
+            agent_xp = list(dir_name.glob(name+'*'))
+            times = [str(p).split('_')[-2] for p in agent_xp]
+            days = [str(p).split('_')[-3] for p in agent_xp]
+            datetimes = [datetime.strptime(days[i]+"_"+times[i], "%Y-%m-%d_%H-%M-%S") for i in range(len(days))]
+            max_date = max(datetimes)
+            agent_folder = name+"_"+datetime.strftime(max_date, "%Y-%m-%d_%H-%M-%S")
+            agent.agent_handlers = []
+            fname = list(dir_name.glob(agent_folder+'*'))[0]
+            for ii in range(agent.n_fit):
+                handler_name = fname / Path(f'agent_handlers/idx_{ii}.pickle')
+                with handler_name.open('rb') as ff:
+                    tmp_dict = pickle.load(ff)
+                    writer_datas[-1][str(ii)] = tmp_dict.get('_writer').data
 
     # preprocess agent stats
     data_list = []
-    for manager in agent_manager_list:
+    for id_agent, manager in enumerate(agent_manager_list):
         # Important: since manager can be a RemoteAgentManager,
         # it is important to avoid repeated accesses to its methods and properties.
         # That is why writer_data is taken from the manager instance only in the line below.
-        writer_data = manager.get_writer_data()
+        if input_dir is not None:
+            writer_data = writer_datas[id_agent]
+        else:
+            writer_data = manager.get_writer_data()
         agent_name = manager.agent_name
         if writer_data is not None:
             for idx in writer_data:
