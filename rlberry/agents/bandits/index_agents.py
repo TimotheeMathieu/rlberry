@@ -13,16 +13,22 @@ class IndexAgent(AgentWithSimplePolicy):
         Compute the index for an arm using the past rewards on this arm and
         the current time t.
 
+    recursive_index_function : tuple of callable or None
+        Compute recursively a sufficient statistic with the first member of the
+        tuple, the second member is the size of this stat and the last compute the
+        index using the sufficient statistics.
+
     phase : bool, default = None
         If True, compute "phased bandit" where the index is computed only every
         phase**j. If None, the Bandit is not phased.
     """
     name = 'IndexAgent'
     def __init__(self, env, index_function = lambda rew, t : np.mean(rew),
-                 phase = None, **kwargs):
+                 recursive_index_function=None, phase = None, **kwargs):
         AgentWithSimplePolicy.__init__(self, env, **kwargs)
         self.n_arms = self.env.action_space.n
         self.index_function = index_function
+        self.recursive_index_function = recursive_index_function
         self.phase = phase
     def fit(self, budget=None, **kwargs):
         n_episodes = budget
@@ -36,27 +42,40 @@ class IndexAgent(AgentWithSimplePolicy):
             actions[a] = action
             if a == n_episodes-1:
                 break
-        if self.phase is None :
-            for ep in range(self.n_arms,n_episodes):
+        if self.recursive_index_function is None:
+            if self.phase is None :
+                for ep in range(self.n_arms,n_episodes):
 
-                indexes = self.get_indexes(rewards, actions, ep+1)
-                action = np.argmax(indexes)
-                next_state, reward, done, _ = self.env.step(action)
-                rewards[ep] = reward
-                actions[ep] = action
+                    indexes = self.get_indexes(rewards, actions, ep+1)
+                    action = np.argmax(indexes)
+                    next_state, reward, done, _ = self.env.step(action)
+                    rewards[ep] = reward
+                    actions[ep] = action
 
+            else:
+                indexes = np.inf*np.ones(self.n_arms)
+                power = 0
+                for ep in range(self.n_arms,n_episodes):
+                    if np.log(ep)/np.log(self.phase) >= power: # geometric scale
+                        indexes = self.get_indexes(rewards, actions, ep+1)
+                        power += 1
+                    action = np.argmax(indexes)
+                    next_state, reward, done, _ = self.env.step(action)
+                    rewards[ep] = reward
+                    actions[ep] = action
         else:
+            compute_stat, len_stat,  compute_index = self.recursive_index_function
             indexes = np.inf*np.ones(self.n_arms)
             power = 0
+            stat = np.zeros(len_stat)
             for ep in range(self.n_arms,n_episodes):
-                if np.log(ep)/np.log(self.phase) >= power: # geometric scale
-                    indexes = self.get_indexes(rewards, actions, ep+1)
-                    power += 1
+                indexes = compute_index(stat, len(actions), ep+1)
                 action = np.argmax(indexes)
                 next_state, reward, done, _ = self.env.step(action)
                 rewards[ep] = reward
                 actions[ep] = action
-                
+                stat = compute_stat(stat, reward)
+
 
         self.optimal_action = np.argmax(indexes)
 
