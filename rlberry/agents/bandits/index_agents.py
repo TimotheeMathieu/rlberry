@@ -34,7 +34,6 @@ class IndexAgent(AgentWithSimplePolicy):
             next_state, reward, done, _ = self.env.step(action)
             rewards[a] = reward
             actions[a] = action
-            self.writer.add_scalar('action',action, a)
             if a == n_episodes-1:
                 break
         if self.phase is None :
@@ -45,7 +44,6 @@ class IndexAgent(AgentWithSimplePolicy):
                 next_state, reward, done, _ = self.env.step(action)
                 rewards[ep] = reward
                 actions[ep] = action
-                self.writer.add_scalar('action',action, ep)
 
         else:
             indexes = np.inf*np.ones(self.n_arms)
@@ -58,7 +56,7 @@ class IndexAgent(AgentWithSimplePolicy):
                 next_state, reward, done, _ = self.env.step(action)
                 rewards[ep] = reward
                 actions[ep] = action
-                self.writer.add_scalar('action',action, ep)
+                
 
         self.optimal_action = np.argmax(indexes)
 
