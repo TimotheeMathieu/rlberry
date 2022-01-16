@@ -18,17 +18,23 @@ class IndexAgent(AgentWithSimplePolicy):
         tuple, the second member is the size of this stat and the last compute the
         index using the sufficient statistics.
 
+    record_action : bool, default=False
+        If True, record in the writer the number of time an action is played at
+        the end of each simulation.
+
     phase : bool, default = None
         If True, compute "phased bandit" where the index is computed only every
         phase**j. If None, the Bandit is not phased.
     """
     name = 'IndexAgent'
     def __init__(self, env, index_function = lambda rew, t : np.mean(rew),
-                 recursive_index_function=None, phase = None, **kwargs):
+                 recursive_index_function=None, record_action = False,
+                 phase = None, **kwargs):
         AgentWithSimplePolicy.__init__(self, env, **kwargs)
         self.n_arms = self.env.action_space.n
         self.index_function = index_function
         self.recursive_index_function = recursive_index_function
+        self.record_action = record_action
         self.phase = phase
     def fit(self, budget=None, **kwargs):
         n_episodes = budget
@@ -76,16 +82,18 @@ class IndexAgent(AgentWithSimplePolicy):
                 actions[ep] = action
                 stat = compute_stat(stat, reward)
 
-
         self.optimal_action = np.argmax(indexes)
-
-        info = {'episode_rewards': rewards}
+        Na = [ np.sum(actions == a) for a in range(self.n_arms)]
+        if self.record_action:
+            for a in range(self.n_arms):
+                self.writer.add_scalar('episode_Na'+str(a), Na[a], 1)
+        info = {"episode_reward":np.sum(rewards)}
         return info
 
     def get_indexes(self, rewards, actions, ep):
         indexes = np.zeros(self.n_arms)
         for a in range(self.n_arms):
-            indexes[a] = self.index_function(rewards[actions == a], ep)
+            indexes[a] = self.index_function(rewards[actions == a], 1)
         return indexes
 
 

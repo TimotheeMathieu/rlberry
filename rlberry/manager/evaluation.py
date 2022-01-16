@@ -89,64 +89,57 @@ def evaluate_agents(agent_manager_list,
 
     return output
 
-
-def plot_writer_data(agent_manager,
+def read_writer_data(agent_manager,
                      tag,
-                     xtag=None,
-                     ax=None,
-                     show=True,
-                     input_dir=None,
                      preprocess_func=None,
-                     title=None,
-                     sns_kwargs=None):
+                     input_dir=None):
     """
-    Given a list of AgentManager, plot data (corresponding to info) obtained in each episode.
+    Given a list of AgentManager, read data (corresponding to info) obtained in each episode.
     The dictionary returned by agents' .fit() method must contain a key equal to `info`.
 
     Parameters
     ----------
     agent_manager : AgentManager, or list of AgentManager
-    tag : str
-        Tag of data to plot on y-axis.
-    xtag : str
-        Tag of data to plot on x-axis. If None, use 'global_step'.
-    ax: matplotlib axis
-        Matplotlib axis on which we plot. If None, create one
-    show: bool
-        If true, calls plt.show().
+
+    tag :  str or list of str
+        Tag of data that we want to preprocess.
+
+    preprocess_func: Callable or None or list of Callable or None
+        Function to apply to 'tag' column before returning data.
+        For instance, if tag=episode_rewards,setting preprocess_func=np.cumsum
+        will return cumulative rewards
+        If None, do not preprocess.
+        If tag is a list, preprocess_func must be None or a list of Callable or
+        None that matches the length of tag.
+
     input_dir: str or None, default = None
-        If not None, plot from the data recorded in the last experiments data
+        If not None, read from the data recorded in the last experiments data
         from input_dir (typically input_dir="rlberry_data/temp").
-    preprocess_func: Callable
-        Function to apply to 'tag' column before plot. For instance, if tag=episode_rewards,
-        setting preprocess_func=np.cumsum will plot cumulative rewards
-    title: str (Optional)
-        Optional title to plot. If None, set to tag.
-    sns_kwargs: dict
-        Optional extra params for seaborn lineplot.
+        Works only if outdir_id_style = 'timestamp' in agent_manager (the default).
 
     Returns
     -------
-    Pandas DataFrame with processed data used by seaborn's lineplot.
+    Pandas DataFrame with data from writers.
     """
-    sns_kwargs = sns_kwargs or {'ci': 'sd'}
 
-    title = title or tag
-    if preprocess_func is not None:
-        ylabel = 'value'
-    else:
-        ylabel = tag
-    preprocess_func = preprocess_func or (lambda x: x)
     agent_manager_list = agent_manager
     if not isinstance(agent_manager_list, list):
         agent_manager_list = [agent_manager_list]
+    if isinstance(tag, str):
+        tags = [tag]
+        preprocess_funcs = [preprocess_func or (lambda x: x)]
+    else:
+        tags = tag
+        if preprocess_func is None:
+            preprocess_funcs = [lambda x: x for _ in range(len(tags))]
+        else:
+            assert len(preprocess_func)==len(tags)
+            preprocess_funcs = preprocess_func
+
     if input_dir is not None:
         writer_datas = []
         dir_name =  Path(input_dir) / 'manager_data'
-        agent_names = []
-
         # Identify agent folders
-        loaded_agent_manager_list = []
         for agent in agent_manager_list:
             writer_datas += [{}]
             name = agent.agent_name
@@ -177,23 +170,75 @@ def plot_writer_data(agent_manager,
         agent_name = manager.agent_name
         if writer_data is not None:
             for idx in writer_data:
-                df = writer_data[idx]
-                processed_df = pd.DataFrame(df[df['tag'] == tag])
-                processed_df['value'] = preprocess_func(processed_df['value'].values)
-                # update name according to AgentManager name
-                processed_df['name'] = agent_name
-                # add column with xtag, if given
-                if xtag is not None:
-                    df_xtag = pd.DataFrame(df[df['tag'] == xtag])
-                    processed_df[xtag] = df_xtag['value'].values
-                data_list.append(processed_df)
-    if len(data_list) == 0:
-        logger.error('[plot_writer_data]: No data to be plotted.')
-        return
+                for id_tag, tag in enumerate(tags):
+                    df = writer_data[idx]
+                    processed_df = pd.DataFrame(df[df['tag'] == tag])
+                    processed_df['value'] = preprocess_funcs[id_tag](processed_df['value'].values)
+                    # update name according to AgentManager name and n_simulation
+                    processed_df['name'] = agent_name
+                    processed_df['n_simu'] = idx
+                    # add column
+                    data_list.append(processed_df)
 
     all_writer_data = pd.concat(data_list, ignore_index=True)
+    return all_writer_data
 
-    data = all_writer_data[all_writer_data['tag'] == tag]
+def plot_writer_data(agent_manager,
+                     tag,
+                     xtag=None,
+                     ax=None,
+                     show=True,
+                     input_dir=None,
+                     preprocess_func=None,
+                     title=None,
+                     sns_kwargs=None):
+    """
+    Given a list of AgentManager, plot data (corresponding to info) obtained in each episode.
+    The dictionary returned by agents' .fit() method must contain a key equal to `info`.
+
+    Parameters
+    ----------
+    agent_manager : AgentManager, or list of AgentManager
+    tag : str
+        Tag of data to plot on y-axis.
+    xtag : str
+        Tag of data to plot on x-axis. If None, use 'global_step'.
+    ax: matplotlib axis
+        Matplotlib axis on which we plot. If None, create one
+    show: bool
+        If true, calls plt.show().
+    input_dir: str or None, default = None
+        If not None, plot from the data recorded in the last experiments data
+        from input_dir (typically input_dir="rlberry_data/temp").
+        Works only if outdir_id_style = 'timestamp' in agent_manager (the default).
+    preprocess_func: Callable
+        Function to apply to 'tag' column before plot. For instance, if tag=episode_rewards,
+        setting preprocess_func=np.cumsum will plot cumulative rewards
+    title: str (Optional)
+        Optional title to plot. If None, set to tag.
+    sns_kwargs: dict
+        Optional extra params for seaborn lineplot.
+
+    Returns
+    -------
+    Pandas DataFrame with processed data used by seaborn's lineplot.
+    """
+    sns_kwargs = sns_kwargs or {'ci': 'sd'}
+
+    title = title or tag
+    if preprocess_func is not None:
+        ylabel = 'value'
+    else:
+        ylabel = tag
+    processed_df = read_writer_data(agent_manager,tag, preprocess_func, input_dir)
+    # add column with xtag, if given
+    if xtag is not None:
+        df_xtag = pd.DataFrame(processed_df[processed_df['tag'] == xtag])
+        processed_df[xtag] = df_xtag['value'].values
+    if len(processed_df) == 0:
+        logger.error('[plot_writer_data]: No data to be plotted.')
+        return
+    data = processed_df[processed_df['tag'] == tag]
     if xtag is None:
         xtag = 'global_step'
 
