@@ -1,5 +1,12 @@
 import numpy as np
 from rlberry.agents import AgentWithSimplePolicy
+import dill
+import pickle
+import logging
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
 
 class IndexAgent(AgentWithSimplePolicy):
     """
@@ -99,3 +106,72 @@ class IndexAgent(AgentWithSimplePolicy):
 
     def policy(self, observation):
         return self.optimal_action
+
+    def save(self, filename):
+        """
+        Save agent object.
+
+        Parameters
+        ----------
+        filename: Path or str
+            File in which to save the Agent.
+
+        Returns
+        -------
+        If save() is successful, a Path object corresponding to the filename is returned.
+        Otherwise, None is returned.
+        Important: the returned filename might differ from the input filename: For instance,
+        the method can append the correct suffix to the name before saving.
+
+        """
+        # remove writer if not pickleable
+        if not dill.pickles(self.writer):
+            self.set_writer(None)
+
+        dict = {"_writer" : self.writer,
+                "seeder" : self.seeder,
+                "_execution_metadata": self._execution_metadata,
+                "_unique_id" : self._unique_id,
+                "_output_dir" : self._output_dir,
+                "optimal_action" : self.optimal_action}
+
+        # save
+        filename = Path(filename).with_suffix('.pickle')
+        filename.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with filename.open("wb") as ff:
+                pickle.dump(dict, ff)
+        except Exception:
+            try:
+                with filename.open("wb") as ff:
+                    dill.dump(self.dict, ff)
+            except Exception as ex:
+                logger.warning("Agent instance cannot be pickled: " + str(ex))
+                return None
+
+        return filename
+
+    @classmethod
+    def load(cls, filename, **kwargs):
+        """Load agent object.
+
+        If overridden, save() method must also be overriden.
+
+        Parameters
+        ----------
+        **kwargs: dict
+            Arguments to required by the __init__ method of the Agent subclass.
+        """
+        filename = Path(filename).with_suffix('.pickle')
+
+        obj = cls(**kwargs)
+        try:
+            with filename.open('rb') as ff:
+                tmp_dict = pickle.load(ff)
+        except Exception:
+            with filename.open('rb') as ff:
+                tmp_dict = dill.load(ff)
+
+        obj.__dict__.update(tmp_dict)
+
+        return obj
