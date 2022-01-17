@@ -100,7 +100,7 @@ class IndexAgent(AgentWithSimplePolicy):
     def get_indexes(self, rewards, actions, ep):
         indexes = np.zeros(self.n_arms)
         for a in range(self.n_arms):
-            indexes[a] = self.index_function(rewards[actions == a], 1)
+            indexes[a] = self.index_function(rewards[actions == a], ep)
         return indexes
 
 
