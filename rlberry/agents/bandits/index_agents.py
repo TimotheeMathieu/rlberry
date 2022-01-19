@@ -55,39 +55,14 @@ class IndexAgent(AgentWithSimplePolicy):
             actions[a] = action
             if a == n_episodes-1:
                 break
-        if self.recursive_index_function is None:
-            if self.phase is None :
-                for ep in range(self.n_arms,n_episodes):
 
-                    indexes = self.get_indexes(rewards, actions, ep+1)
-                    action = np.argmax(indexes)
-                    next_state, reward, done, _ = self.env.step(action)
-                    rewards[ep] = reward
-                    actions[ep] = action
-
-            else:
-                indexes = np.inf*np.ones(self.n_arms)
-                power = 0
-                for ep in range(self.n_arms,n_episodes):
-                    if np.log(ep)/np.log(self.phase) >= power: # geometric scale
-                        indexes = self.get_indexes(rewards, actions, ep+1)
-                        power += 1
-                    action = np.argmax(indexes)
-                    next_state, reward, done, _ = self.env.step(action)
-                    rewards[ep] = reward
-                    actions[ep] = action
-        else:
-            compute_stat, len_stat,  compute_index = self.recursive_index_function
-            indexes = np.inf*np.ones(self.n_arms)
-            power = 0
-            stat = np.zeros(len_stat)
-            for ep in range(self.n_arms,n_episodes):
-                indexes = compute_index(stat, len(actions), ep+1)
-                action = np.argmax(indexes)
-                next_state, reward, done, _ = self.env.step(action)
-                rewards[ep] = reward
-                actions[ep] = action
-                stat = compute_stat(stat, reward)
+        indexes = np.inf*np.ones(self.n_arms)
+        for ep in range(self.n_arms,n_episodes):
+            indexes = self.get_indexes(rewards, actions, ep)
+            action = np.argmax(indexes)
+            next_state, reward, done, _ = self.env.step(action)
+            rewards[ep] = reward
+            actions[ep] = action
 
         self.optimal_action = np.argmax(indexes)
         Na = [ np.sum(actions == a) for a in range(self.n_arms)]

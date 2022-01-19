@@ -143,14 +143,19 @@ def read_writer_data(agent_manager,
         for agent in agent_manager_list:
             writer_datas += [{}]
             name = agent.agent_name
-            agent_xp = list(dir_name.glob(name+'*'))
+            logger.info('[read_writer_data]: loading data for '+name)
+            agent_xp = list(dir_name.glob(name+'_*'))
             times = [str(p).split('_')[-2] for p in agent_xp]
             days = [str(p).split('_')[-3] for p in agent_xp]
             datetimes = [datetime.strptime(days[i]+"_"+times[i], "%Y-%m-%d_%H-%M-%S") for i in range(len(days))]
             max_date = max(datetimes)
             agent_folder = name+"_"+datetime.strftime(max_date, "%Y-%m-%d_%H-%M-%S")
             agent.agent_handlers = []
-            fname = list(dir_name.glob(agent_folder+'*'))[0]
+            fname = list(dir_name.glob(agent_folder+'*'))
+            if len(fname)==0:
+                raise ValueError('No save file for agent '+name)
+            else:
+                fname = fname[0]
             for ii in range(agent.n_fit):
                 handler_name = fname / Path(f'agent_handlers/idx_{ii}.pickle')
                 with handler_name.open('rb') as ff:

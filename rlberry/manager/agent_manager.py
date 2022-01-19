@@ -252,7 +252,6 @@ class AgentManager:
 
         # Train env
         self.train_env = train_env
-
         # Check eval_env
         if eval_env is None:
             eval_env = deepcopy(train_env)
@@ -334,6 +333,7 @@ class AgentManager:
         self.optuna_study = None
         self.db_filename = None
         self.optuna_storage_url = None
+
 
     def _init_optuna_storage_url(self):
         self.output_dir.mkdir(parents=True, exist_ok=True)

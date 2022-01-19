@@ -25,6 +25,7 @@ class Bandit(Model):
     def __init__(self, laws=[]):
         Model.__init__(self)
         self.laws = laws
+        self.reset()
 
     def step(self, action):
         # test that the action exists
@@ -71,6 +72,7 @@ class CorruptedLaws:
             return self.cor_law.rvs(random_state=rng)
         else:
             return self.law.rvs(random_state=rng)
+
     def mean(self):
         return (1-self.cor_prop)*self.law.mean()+self.cor_prop*self.cor_law.mean()
 
@@ -109,6 +111,7 @@ class CorruptedNormalBandit(Bandit):
         A = len(self.laws)
         self.action_space = spaces.Discrete(A)
         self._actions = np.arange(A)
+
 
     def make_laws(self, means, stds, cor_prop, cor_laws):
         if cor_laws is not None:
