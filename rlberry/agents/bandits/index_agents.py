@@ -73,9 +73,7 @@ class IndexAgent(AgentWithSimplePolicy):
         return info
 
     def get_indexes(self, rewards, actions, ep):
-        indexes = np.zeros(self.n_arms)
-        for a in range(self.n_arms):
-            indexes[a] = self.index_function(rewards[actions == a], ep)
+        indexes = self.index_function([ rewards[actions == a] for a in range(self.n_arms)], ep)
         return indexes
 
 
