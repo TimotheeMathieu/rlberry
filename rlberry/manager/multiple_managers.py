@@ -14,12 +14,11 @@ class MultipleManagers:
 
     Parameters
     ----------
-
-    max_workers: int, default=1
+    max_workers: int, default=None
         max number of workers (agent_manager) called at the same time.
     """
 
-    def __init__(self, max_workers=1) -> None:
+    def __init__(self, max_workers=None) -> None:
         super().__init__()
         self.instances = []
         self.max_workers = max_workers
@@ -44,18 +43,16 @@ class MultipleManagers:
             If true, save AgentManager intances immediately after fitting.
             AgentManager.save() is called.
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=self.max_workers
+        ) as executor:
             futures = []
             for inst in self.instances:
-                futures.append(
-                    executor.submit(fit_stats, inst, save=save)
-                )
+                futures.append(executor.submit(fit_stats, inst, save=save))
 
             fitted_instances = []
             for future in concurrent.futures.as_completed(futures):
-                fitted_instances.append(
-                    future.result()
-                )
+                fitted_instances.append(future.result())
 
             self.instances = fitted_instances
 

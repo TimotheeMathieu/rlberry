@@ -25,7 +25,6 @@ class Bandit(Model):
     def __init__(self, laws=[]):
         Model.__init__(self)
         self.laws = laws
-        self.reset()
 
     def step(self, action):
         # test that the action exists

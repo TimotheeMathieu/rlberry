@@ -2,21 +2,21 @@ import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from os import listdir
 from pathlib import Path
 from datetime import datetime
-from rlberry.manager.agent_manager import AgentHandler
 import pickle
 
 logger = logging.getLogger(__name__)
 
 
-def evaluate_agents(agent_manager_list,
-                    n_simulations=5,
-                    fignum=None,
-                    show=True,
-                    plot=True,
-                    sns_kwargs=None):
+def evaluate_agents(
+    agent_manager_list,
+    n_simulations=5,
+    fignum=None,
+    show=True,
+    plot=True,
+    sns_kwargs=None,
+):
     """
     Evaluate and compare each of the agents in agent_manager_list.
 
@@ -46,13 +46,15 @@ def evaluate_agents(agent_manager_list,
 
     eval_outputs = []
     for agent_manager in agent_manager_list:
-        logger.info(f'Evaluating {agent_manager.agent_name}...')
+        logger.info(f"Evaluating {agent_manager.agent_name}...")
         outputs = agent_manager.eval_agents(n_simulations)
         if len(outputs) > 0:
             eval_outputs.append(outputs)
 
     if len(eval_outputs) == 0:
-        logger.error('[evaluate_agents]: No evaluation data. Make sure AgentManager.fit() has been called.')
+        logger.error(
+            "[evaluate_agents]: No evaluation data. Make sure AgentManager.fit() has been called."
+        )
         return
 
     #
@@ -89,10 +91,8 @@ def evaluate_agents(agent_manager_list,
 
     return output
 
-def read_writer_data(agent_manager,
-                     tag,
-                     preprocess_func=None,
-                     input_dir=None):
+
+def read_writer_data(agent_manager, tag, preprocess_func=None, input_dir=None):
     """
     Given a list of AgentManager, read data (corresponding to info) obtained in each episode.
     The dictionary returned by agents' .fit() method must contain a key equal to `info`.
@@ -133,34 +133,37 @@ def read_writer_data(agent_manager,
         if preprocess_func is None:
             preprocess_funcs = [lambda x: x for _ in range(len(tags))]
         else:
-            assert len(preprocess_func)==len(tags)
+            assert len(preprocess_func) == len(tags)
             preprocess_funcs = preprocess_func
 
     if input_dir is not None:
         writer_datas = []
-        dir_name =  Path(input_dir) / 'manager_data'
+        dir_name = Path(input_dir) / "manager_data"
         # Identify agent folders
         for agent in agent_manager_list:
             writer_datas += [{}]
             name = agent.agent_name
-            logger.info('[read_writer_data]: loading data for '+name)
-            agent_xp = list(dir_name.glob(name+'_*'))
-            times = [str(p).split('_')[-2] for p in agent_xp]
-            days = [str(p).split('_')[-3] for p in agent_xp]
-            datetimes = [datetime.strptime(days[i]+"_"+times[i], "%Y-%m-%d_%H-%M-%S") for i in range(len(days))]
+            logger.info("[read_writer_data]: loading data for " + name)
+            agent_xp = list(dir_name.glob(name + "_*"))
+            times = [str(p).split("_")[-2] for p in agent_xp]
+            days = [str(p).split("_")[-3] for p in agent_xp]
+            datetimes = [
+                datetime.strptime(days[i] + "_" + times[i], "%Y-%m-%d_%H-%M-%S")
+                for i in range(len(days))
+            ]
             max_date = max(datetimes)
-            agent_folder = name+"_"+datetime.strftime(max_date, "%Y-%m-%d_%H-%M-%S")
+            agent_folder = name + "_" + datetime.strftime(max_date, "%Y-%m-%d_%H-%M-%S")
             agent.agent_handlers = []
-            fname = list(dir_name.glob(agent_folder+'*'))
-            if len(fname)==0:
-                raise ValueError('No save file for agent '+name)
+            fname = list(dir_name.glob(agent_folder + "*"))
+            if len(fname) == 0:
+                raise ValueError("No save file for agent " + name)
             else:
                 fname = fname[0]
             for ii in range(agent.n_fit):
-                handler_name = fname / Path(f'agent_handlers/idx_{ii}.pickle')
-                with handler_name.open('rb') as ff:
+                handler_name = fname / Path(f"agent_handlers/idx_{ii}.pickle")
+                with handler_name.open("rb") as ff:
                     tmp_dict = pickle.load(ff)
-                    writer_datas[-1][str(ii)] = tmp_dict.get('_writer').data
+                    writer_datas[-1][str(ii)] = tmp_dict.get("_writer").data
 
     # preprocess agent stats
     data_list = []
@@ -177,26 +180,31 @@ def read_writer_data(agent_manager,
             for idx in writer_data:
                 for id_tag, tag in enumerate(tags):
                     df = writer_data[idx]
-                    processed_df = pd.DataFrame(df[df['tag'] == tag])
-                    processed_df['value'] = preprocess_funcs[id_tag](processed_df['value'].values)
+                    processed_df = pd.DataFrame(df[df["tag"] == tag])
+                    processed_df["value"] = preprocess_funcs[id_tag](
+                        processed_df["value"].values
+                    )
                     # update name according to AgentManager name and n_simulation
-                    processed_df['name'] = agent_name
-                    processed_df['n_simu'] = idx
+                    processed_df["name"] = agent_name
+                    processed_df["n_simu"] = idx
                     # add column
                     data_list.append(processed_df)
 
     all_writer_data = pd.concat(data_list, ignore_index=True)
     return all_writer_data
 
-def plot_writer_data(agent_manager,
-                     tag,
-                     xtag=None,
-                     ax=None,
-                     show=True,
-                     input_dir=None,
-                     preprocess_func=None,
-                     title=None,
-                     sns_kwargs=None):
+
+def plot_writer_data(
+    agent_manager,
+    tag,
+    xtag=None,
+    ax=None,
+    show=True,
+    input_dir=None,
+    preprocess_func=None,
+    title=None,
+    sns_kwargs=None,
+):
     """
     Given a list of AgentManager, plot data (corresponding to info) obtained in each episode.
     The dictionary returned by agents' .fit() method must contain a key equal to `info`.
@@ -228,35 +236,39 @@ def plot_writer_data(agent_manager,
     -------
     Pandas DataFrame with processed data used by seaborn's lineplot.
     """
-    sns_kwargs = sns_kwargs or {'ci': 'sd'}
+    sns_kwargs = sns_kwargs or {"ci": "sd"}
 
     title = title or tag
     if preprocess_func is not None:
-        ylabel = 'value'
+        ylabel = "value"
     else:
         ylabel = tag
-    processed_df = read_writer_data(agent_manager,tag, preprocess_func, input_dir)
+    processed_df = read_writer_data(agent_manager, tag, preprocess_func, input_dir)
     # add column with xtag, if given
     if xtag is not None:
-        df_xtag = pd.DataFrame(processed_df[processed_df['tag'] == xtag])
-        processed_df[xtag] = df_xtag['value'].values
+        df_xtag = pd.DataFrame(processed_df[processed_df["tag"] == xtag])
+        processed_df[xtag] = df_xtag["value"].values
     if len(processed_df) == 0:
-        logger.error('[plot_writer_data]: No data to be plotted.')
+        logger.error("[plot_writer_data]: No data to be plotted.")
         return
-    data = processed_df[processed_df['tag'] == tag]
+    data = processed_df[processed_df["tag"] == tag]
     if xtag is None:
-        xtag = 'global_step'
+        xtag = "global_step"
 
     if data[xtag].notnull().sum() > 0:
         xx = xtag
-        if data['global_step'].isna().sum() > 0:
-            logger.warning(f'Plotting {tag} vs {xtag}, but {xtag} might be missing for some agents.')
+        if data["global_step"].isna().sum() > 0:
+            logger.warning(
+                f"Plotting {tag} vs {xtag}, but {xtag} might be missing for some agents."
+            )
     else:
         xx = data.index
 
     if ax is None:
-        figure, ax = plt.subplots(1,1)
-    lineplot_kwargs = dict(x=xx, y='value', hue='name', style='name', data=data)
+        figure, ax = plt.subplots(1, 1)
+    lineplot_kwargs = dict(x=xx, y="value",
+                           hue="name", style="name",
+                           data=data, ax=ax)
     lineplot_kwargs.update(sns_kwargs)
     sns.lineplot(**lineplot_kwargs)
     ax.set_title(title)
