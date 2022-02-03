@@ -21,7 +21,9 @@ class Bandit(Model):
         has a method .rvs().
 
     """
+
     name = ""
+
     def __init__(self, laws=[]):
         Model.__init__(self)
         self.laws = laws
@@ -73,7 +75,9 @@ class CorruptedLaws:
             return self.law.rvs(random_state=rng)
 
     def mean(self):
-        return (1-self.cor_prop)*self.law.mean()+self.cor_prop*self.cor_law.mean()
+        return (
+            1 - self.cor_prop
+        ) * self.law.mean() + self.cor_prop * self.cor_law.mean()
 
 
 class CorruptedNormalBandit(Bandit):
@@ -111,7 +115,6 @@ class CorruptedNormalBandit(Bandit):
         self.action_space = spaces.Discrete(A)
         self._actions = np.arange(A)
 
-
     def make_laws(self, means, stds, cor_prop, cor_laws):
         if cor_laws is not None:
             self.cor_laws = cor_laws
@@ -130,6 +133,7 @@ class CorruptedNormalBandit(Bandit):
             CorruptedLaws(inlier_laws[a], cor_prop, self.cor_laws[a])
             for a in range(len(means))
         ]
+
 
 class CorruptedParetoBandit(Bandit):
     """
@@ -183,4 +187,59 @@ class CorruptedParetoBandit(Bandit):
         return [
             CorruptedLaws(inlier_laws[a], cor_prop, self.cor_laws[a])
             for a in range(len(alphas))
+        ]
+
+
+class CorruptedWeibullBandit(Bandit):
+    """
+    Class for Weibull Bandits corrupted by nature.
+
+    Parameters
+    ----------
+
+    c: array-like of size n_arms, default=array([1,1])
+        shape parameters.
+
+    scale: array-like of size n_arms or None, default=None
+        Scale parameters of the law of inliers of each of the arms. If None,
+        use array with all ones.
+
+    cor_prop: float in (0,1/2), default=0.05
+        Proportion of corruption
+
+    cor_laws: list of scipy frozen laws or None, default=None
+        Laws of corruption on each arm. If None, all the arms are corrupted by
+        a normal of mean 1000 and std 1.
+    """
+
+    def __init__(
+        self,
+        c=np.array([1, 1]),
+        scale=None,
+        cor_prop=0.05,
+        cor_laws=None,
+    ):
+        Bandit.__init__(self)
+        self.laws = self.make_laws(c, scale, cor_prop, cor_laws)
+        A = len(self.laws)
+        self.action_space = spaces.Discrete(A)
+        self._actions = np.arange(A)
+
+    def make_laws(self, c, scale, cor_prop, cor_laws):
+        if cor_laws is not None:
+            self.cor_laws = cor_laws
+        else:
+            self.cor_laws = [stats.norm(loc=1000) for a in range(len(c))]
+        if scale is None:
+            self.scale = np.ones(len(c))
+        else:
+            self.scale = scale
+        assert len(c) == len(self.scale)
+        assert cor_prop <= 0.5
+        inlier_laws = [
+            stats.weibull_min(c=c[a], scale=self.scale[a]) for a in range(len(c))
+        ]
+        return [
+            CorruptedLaws(inlier_laws[a], cor_prop, self.cor_laws[a])
+            for a in range(len(c))
         ]
