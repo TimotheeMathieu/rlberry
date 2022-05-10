@@ -34,7 +34,14 @@ Install the development version to test new features.
 
     $ pip install git+https://github.com/rlberry-py/rlberry.git#egg=rlberry[default]
 
+.. warning::
 
+   When using Python 3.10, there seem to be a problem when installing PyOpenGL-accelerate. For
+   now, we advise people to use Python 3.9 with PyOpenGL==3.1.5 and PyOpenGL-accelerate==3.1.5.
+   It is also possible to use rlberry without installing PyOpenGL-accelerate but this could cause
+   rendering to be slow.
+
+    
 Previous versions
 -----------------
 
@@ -64,7 +71,7 @@ Deep RL agents require extra libraries, like PyTorch and JAX.
     $ pip install git+https://github.com/rlberry-py/rlberry.git#egg=rlberry[torch_agents]
     $ pip install tensorboard   # only if you're not installing jax_agents too!
 
-* JAX agents (**Linux only**):
+* JAX agents (**Linux only, experimental**):
 
 .. code:: bash
 
