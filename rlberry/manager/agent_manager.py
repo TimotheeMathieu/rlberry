@@ -27,11 +27,7 @@ from typing import List, Optional, Tuple, Union
 from rlberry import types
 
 
-_OPTUNA_INSTALLED = True
-try:
-    import optuna
-except Exception:
-    _OPTUNA_INSTALLED = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -874,6 +870,11 @@ class AgentManager:
         TEMP_DIR = self.output_dir_ / "optim"
 
         global _OPTUNA_INSTALLED
+        _OPTUNA_INSTALLED = True
+        try:
+            import optuna
+        except Exception:
+            _OPTUNA_INSTALLED = False
         if not _OPTUNA_INSTALLED:
             logging.error("Optuna not installed.")
             return
