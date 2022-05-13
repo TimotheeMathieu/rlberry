@@ -6,7 +6,7 @@
 Installation
 ============
 
-First, we suggest you to create a virtual environment using 
+First, we suggest you to create a virtual environment using
 `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_.
 
 .. code:: bash
@@ -41,7 +41,7 @@ Install the development version to test new features.
    It is also possible to use rlberry without installing PyOpenGL-accelerate but this could cause
    rendering to be slow.
 
-    
+
 Previous versions
 -----------------
 
