@@ -1,13 +1,13 @@
 from rlberry.envs import gym_make
 from rlberry.manager import plot_writer_data, AgentManager, evaluate_agents
-from rlberry.agents.experimental.torch import PPOAgent
+from rlberry.agents.torch import PPOAgent
 import gym
 from stable_baselines3 import PPO
 from rlberry.agents.stable_baselines import StableBaselinesAgent
 from gym.wrappers import TimeLimit
 import torch
 
-env_name = "Acrobot-v1"
+env_name = "Pendulum-v1"
 
 ppo = AgentManager(
     PPOAgent,
@@ -24,10 +24,16 @@ ppo_sb3 = AgentManager(
     init_kwargs=dict(
         algo_cls=PPO,
         verbose=0,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=5,
-        learning_rate=0.01,
+        n_steps=1024,
+        batch_size=256,
+        n_epochs=10,
+        gae_lambda=0.95,
+        gamma=0.9,
+        ent_coef=0,
+        learning_rate=0.001,
+        clip_range=0.2,
+        use_sde=True,
+        sde_sample_freq=4,
     ),
     # policy_kwargs=policy_kwargs),
     eval_kwargs=dict(eval_horizon=500),
