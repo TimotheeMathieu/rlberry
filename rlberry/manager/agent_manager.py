@@ -997,6 +997,7 @@ class AgentManager:
                             n_trials=n_trials,
                             timeout=timeout,
                             gc_after_trial=True,
+                            show_progress_bar=True,
                         )
                     executor.shutdown()
             elif optuna_parallelization == "process":
@@ -1010,6 +1011,7 @@ class AgentManager:
                             n_trials=n_trials // n_optuna_workers,
                             timeout=timeout,
                             gc_after_trial=True,
+                            show_progress_bar=True,
                         )
                     executor.shutdown()
             else:
