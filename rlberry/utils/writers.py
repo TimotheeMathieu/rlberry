@@ -70,6 +70,7 @@ class DefaultWriter:
         assert style_log in [
             "multi_line",
             "one_line",
+            "recfile",
             "progressbar",
         ], "Style log for writer unknown."
         self._style_log = style_log
@@ -339,6 +340,7 @@ class DefaultWriter:
                     logger.info(message)
                 else:
                     self._style_log = "one_line"
+            
             if self._style_log == "one_line":
                 self._time_last_log = t_now
                 message = ""
@@ -354,6 +356,25 @@ class DefaultWriter:
                     header += f"[worker: {self._execution_metadata.obj_worker_id}]"
                 message = (
                     f"[{header}] | max_global_step = {max_global_step} | " + message
+                )
+                logger.info(message)
+
+            if self._style_log == "recfile":
+                self._time_last_log = t_now
+                message = ""
+                for tag in self._data:
+                    val = self._data[tag]["value"][-1]
+                    gstep = self._data[tag]["global_step"][-1]
+                    normalized_tag = tag.replace("/", "_")
+                    message += f"{normalized_tag}: {val} \n"
+                    if not np.isnan(gstep):
+                        max_global_step = max(max_global_step, gstep)
+
+                header = self._name
+                if self._execution_metadata:
+                    header += f"[worker: {self._execution_metadata.obj_worker_id}]"
+                message = (
+                    f"max_global_step: {max_global_step}\n" + message + "\n"
                 )
                 logger.info(message)
 

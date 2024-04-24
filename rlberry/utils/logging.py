@@ -50,7 +50,7 @@ class ColoredFormatter(logging.Formatter):
 
 def configure_logging(
     level: str = "INFO",
-    file_path: Path = None,
+    file_path: Path = Path("rlberry_log.txt"),
     file_level: str = "DEBUG",
     default_msg: str = "",
 ) -> None:
@@ -75,6 +75,7 @@ def configure_logging(
         "disable_existing_loggers": False,
         "formatters": {
             "standard": {"format": standard_msg_fmt},
+            "simple": {"format": "%(message)s"},
             "detailed": {
                 "format": default_msg
                 + "[%(name)s:%(levelname)s] %(asctime)s: %(message)s "
@@ -101,7 +102,7 @@ def configure_logging(
             "class": "logging.FileHandler",
             "filename": file_path,
             "level": file_level,
-            "formatter": "detailed",
+            "formatter": "simple",
             "mode": "w",
         }
         config["loggers"]["rlberry_logger"]["handlers"].append(file_path.name)
